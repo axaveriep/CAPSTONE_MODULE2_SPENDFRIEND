@@ -6,8 +6,9 @@ public class Transfer {
 
     private long transferId;
 
-    private long transferTypeId;
-    private long transferStatusId;
+/*    private long transferTypeId;
+    private long transferStatusId;*/
+
     private long accountIdFrom;
     private long accountIdTo;
     private BigDecimal amount;
@@ -27,7 +28,7 @@ public class Transfer {
         this.transferId = transferId;
     }
 
-    public long getTransferTypeId() {
+/*    public long getTransferTypeId() {
         return transferTypeId;
     }
 
@@ -41,7 +42,7 @@ public class Transfer {
 
     public void setTransferStatusId(long transferStatusId) {
         this.transferStatusId = transferStatusId;
-    }
+    }*/
 
     public long getAccountIdFrom() {
         return accountIdFrom;
@@ -114,7 +115,7 @@ public class Transfer {
 //        this.toAccount = toAccount;
 //    }
 
-        public Transfer(long transferId, long transferTypeId, long transferStatusId, long accountIdFrom, long accountIdTo, BigDecimal amount, TransferStatus transferStatus, TransferType transferType, Account fromAccount, Account toAccount) {
+/*        public Transfer(long transferId, long transferTypeId, long transferStatusId, long accountIdFrom, long accountIdTo, BigDecimal amount, TransferStatus transferStatus, TransferType transferType, Account fromAccount, Account toAccount) {
         this.transferId = transferId;
         this.transferTypeId = transferTypeId;
         this.transferStatusId = transferStatusId;
@@ -125,7 +126,16 @@ public class Transfer {
         this.transferType = transferType;
         this.fromAccount = fromAccount;
         this.toAccount = toAccount;
+    }*/
+
+    public Transfer(long transferId, long accountIdFrom, long accountIdTo, BigDecimal amount, TransferStatus transferStatus, TransferType transferType, Account fromAccount, Account toAccount) {
+        this.transferId = transferId;
+        this.accountIdFrom = accountIdFrom;
+        this.accountIdTo = accountIdTo;
+        this.amount = amount;
+        this.transferStatus = transferStatus;
+        this.transferType = transferType;
+        this.fromAccount = fromAccount;
+        this.toAccount = toAccount;
     }
-
-
 }

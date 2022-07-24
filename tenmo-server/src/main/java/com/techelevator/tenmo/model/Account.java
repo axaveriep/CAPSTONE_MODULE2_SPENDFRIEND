@@ -33,6 +33,7 @@ public class Account {
         this.balance = balance;
     }
 
+    /* JsonIgnore annotation prevents recursion by not also showing user information when we pull an account */
     @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="USER_ID", insertable = false, updatable = false)

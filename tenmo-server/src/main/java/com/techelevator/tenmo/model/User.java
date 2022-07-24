@@ -1,5 +1,6 @@
 package com.techelevator.tenmo.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,13 +27,16 @@ public class User {
    @Column(name="PASSWORD_HASH")
    private String password;
 
+   /* We used the transient annotation to tell JPA this variable doesn't have a column in the table */
    @Transient
    private boolean activated = true;
 
    @Transient
    private Set<Authority> authorities = new HashSet<>();
 
+   /* Joining an Account and User with a relationship annotation we can see a user's account when we call them */
    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+   @JsonIgnoreProperties("balance")
    private Account account;
 
    @Autowired

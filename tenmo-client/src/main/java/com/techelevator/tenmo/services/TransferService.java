@@ -1,12 +1,9 @@
 package com.techelevator.tenmo.services;
 
-import com.techelevator.tenmo.App;
 import com.techelevator.tenmo.model.*;
 import com.techelevator.util.BasicLogger;
-import okhttp3.Response;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
@@ -31,14 +28,9 @@ public class TransferService {
         this.baseUrl = baseUrl;
     }
 
-
-
-    //TODO Send Transfer
-
     public Transfer sendTransfer (TransferCredentials transferCredentials) {
         HttpEntity<TransferCredentials> entity = createTransferCredentialsEntity(transferCredentials);
         Transfer newTransfer = new Transfer();
-        System.out.println(transferCredentials.getAmount() + " test transfer amount --  before try");
         try {
             ResponseEntity<Transfer> response = restTemplate.exchange(baseUrl + "transfer/send", HttpMethod.POST, entity, Transfer.class);
             newTransfer = response.getBody();
@@ -46,7 +38,6 @@ public class TransferService {
         } catch (RestClientResponseException e) {
             BasicLogger.log(e.getMessage());
         }
-        System.out.println(newTransfer.getTransferStatusId() + " -- status ID | Transfer service -- send transfer");
         return newTransfer;
     }
 
@@ -63,7 +54,6 @@ public class TransferService {
     }
 
     public Transfer approveTransfer (long transferId) {
-        //HttpEntity<Transfer> entity = createTransferEntity(pendingTransfer);
         Transfer approvedTransfer = new Transfer();
         try {
             ResponseEntity<Transfer> response = restTemplate.exchange(baseUrl + "transfer/approve/" + transferId, HttpMethod.PUT, createEntity(), Transfer.class);
@@ -86,10 +76,9 @@ public class TransferService {
     }
 
     public List<Transfer> getAllTransfersByAccountId(long accountId) {
-        HttpEntity<Void> entity = createEntity();
-         Transfer[] transfers = new Transfer[]{};
+        Transfer[] transfers = new Transfer[]{};
         try {
-           ResponseEntity<Transfer[]> transferEntity = restTemplate.exchange(baseUrl + "transfer/account/" + accountId, HttpMethod.GET, entity, Transfer[].class);
+           ResponseEntity<Transfer[]> transferEntity = restTemplate.exchange(baseUrl + "transfer/account/" + accountId, HttpMethod.GET, createEntity(), Transfer[].class);
             transfers = transferEntity.getBody();
         } catch (RestClientException e) {
             BasicLogger.log(e.getMessage());
@@ -97,11 +86,10 @@ public class TransferService {
         return Arrays.asList(transfers);
     }
 
-    public List<Transfer> allSentTransfersByAccountId(long accountId) {
-        HttpEntity<Void> entity = createEntity();
+    public List<Transfer> getAllSentTransfersByAccountId(long accountId) {
         Transfer[] sentTransfers = new Transfer[]{};
         try {
-            ResponseEntity<Transfer[]> sentTransferEntity = restTemplate.exchange(baseUrl + "transfer/account/" + accountId + "/from", HttpMethod.GET, entity, Transfer[].class);
+            ResponseEntity<Transfer[]> sentTransferEntity = restTemplate.exchange(baseUrl + "transfer/account/" + accountId + "/from", HttpMethod.GET, createEntity(), Transfer[].class);
         sentTransfers = sentTransferEntity.getBody();
         } catch (RestClientException e) {
             BasicLogger.log(e.getMessage());
@@ -110,10 +98,9 @@ public class TransferService {
     }
 
     public List<Transfer> allReceivedTransfersByAccountId(long accountId) {
-        HttpEntity<Void> entity = createEntity();
         Transfer[] receivedTransfers = new Transfer[]{};
         try {
-            ResponseEntity<Transfer[]>  receivedTransferEntity = restTemplate.exchange(baseUrl + "transfer/account/" + accountId + "/to", HttpMethod.GET, entity, Transfer[].class);
+            ResponseEntity<Transfer[]>  receivedTransferEntity = restTemplate.exchange(baseUrl + "transfer/account/" + accountId + "/to", HttpMethod.GET, createEntity(), Transfer[].class);
             receivedTransfers = receivedTransferEntity.getBody();
         } catch (RestClientException e) {
             BasicLogger.log(e.getMessage());
@@ -121,11 +108,10 @@ public class TransferService {
         return Arrays.asList(receivedTransfers);
     }
 
-    public List<Transfer> getAllSentTransfersByAccountIdAndStatusId(long accountId, long statusId) {
-        HttpEntity<Void> entity = createEntity();
+    public List<Transfer> getAllSentTransfersByAccountIdAndStatus(long accountId,  long statusId) {
         Transfer[] transfers = new Transfer[]{};
         try {
-            ResponseEntity<Transfer[]> response = restTemplate.exchange(baseUrl + "transfer/account/" + accountId + "/from/status/" + statusId, HttpMethod.GET, entity, Transfer[].class);
+            ResponseEntity<Transfer[]> response = restTemplate.exchange(baseUrl + "transfer/account/" + accountId + "/from/status/" + statusId, HttpMethod.GET, createEntity(), Transfer[].class);
             transfers = response.getBody();
         } catch (RestClientException e) {
             BasicLogger.log(e.getMessage());
@@ -134,10 +120,9 @@ public class TransferService {
     }
 
     public List<Transfer> getAllReceivedTransfersByAccountIdAndStatusId(long accountId, long statusId) {
-        HttpEntity<Void> entity = createEntity();
         Transfer[] transfers = new Transfer[]{};
         try {
-            ResponseEntity<Transfer[]> response = restTemplate.exchange(baseUrl + "transfer/account/" + accountId + "/to/status/" + statusId, HttpMethod.GET, entity, Transfer[].class);
+            ResponseEntity<Transfer[]> response = restTemplate.exchange(baseUrl + "transfer/account/" + accountId + "/to/status/" + statusId, HttpMethod.GET, createEntity(), Transfer[].class);
             transfers = response.getBody();
         } catch (RestClientException e) {
             BasicLogger.log(e.getMessage());
@@ -147,9 +132,8 @@ public class TransferService {
 
     public Transfer getTransferByTransferId(long transferId) {
         Transfer transfer = null;
-        HttpEntity<Void> entity = createEntity();
         try {
-            ResponseEntity<Transfer> response = restTemplate.exchange(baseUrl + "transfer/" + transferId, HttpMethod.GET, entity, Transfer.class);
+            ResponseEntity<Transfer> response = restTemplate.exchange(baseUrl + "transfer/" + transferId, HttpMethod.GET, createEntity(), Transfer.class);
             transfer = response.getBody();
         } catch (RestClientException e) {
             BasicLogger.log(e.getMessage());

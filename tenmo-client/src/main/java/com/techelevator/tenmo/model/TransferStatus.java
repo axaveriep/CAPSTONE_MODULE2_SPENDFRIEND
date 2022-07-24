@@ -1,16 +1,26 @@
 package com.techelevator.tenmo.model;
 
-public class TransferStatus {
+public enum TransferStatus {
+    pending,
+    approved,
+    rejected,
+    invalid_transfer,
+    invalid_amount,
+    user_not_found,
+    nsf,
+    unauthorized;
 
     // Transfer transfer;
-
+/*
         private long transferStatusId;
 
-        private String transferStatusDescription;
+        private String transferStatusDescription;*/
 
-    public TransferStatus() {}
+    TransferStatus() {}
 
-    public TransferStatus(long transferStatusId, String transferStatusDescription) {
+
+
+/*    TransferStatus(long transferStatusId, String transferStatusDescription) {
         this.transferStatusId = transferStatusId;
         this.transferStatusDescription = transferStatusDescription;
     }
@@ -33,7 +43,7 @@ public class TransferStatus {
 
     public void setTransferStatusId(long transferStatusId) {
         this.transferStatusId = transferStatusId;
-    }
+    }*/
 
 
 }

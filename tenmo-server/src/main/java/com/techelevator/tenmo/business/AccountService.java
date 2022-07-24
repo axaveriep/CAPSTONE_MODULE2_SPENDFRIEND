@@ -27,10 +27,6 @@ public class AccountService {
         return accountRepository.findByUserId(id);
     }
 
-    List<User> findAllUsers() {
-       return userRepository.findAll();
-    }
-
     public BigDecimal getBalance(long accountId) {
         return accountRepository.findById(accountId).getBalance();
     }

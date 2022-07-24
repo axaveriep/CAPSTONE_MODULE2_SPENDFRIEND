@@ -9,13 +9,12 @@ import lombok.Setter;
 import javax.persistence.*;
 import java.math.BigDecimal;
 
+/* Lombok annotations replace getters, setters, constructors */
 @Getter
 @Setter
 @NoArgsConstructor
 @Entity
 @Table(name = "transfer")
-
-
 public class Transfer {
 
     @Id
@@ -23,12 +22,18 @@ public class Transfer {
     @Column(name = "transfer_id")
     private long transferId;
 
-    @Column(name="transfer_type_id")
-    private long transferTypeId;
+    /* We changed TransferType and TransferStatus
+    to enum classes for readability
+    * this way we didn't have to join two more tables,
+    * and assigning types and statuses is more clear */
 
-    @Column(name="transfer_status_id")
-    @JsonProperty("transferStatusId")
-    private long transferStatusId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transfer_type")
+    private TransferType transferType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transfer_status")
+    private TransferStatus transferStatus;
 
     @Column(name = "account_from")
     @JsonProperty("accountIdFrom")
@@ -41,6 +46,16 @@ public class Transfer {
     @Column(name="amount")
     private BigDecimal amount;
 
+
+    //<editor-fold desc="Old code joined Type and Status tables to each transfer">
+/*    @Column(name="transfer_type_id")
+    private long transferTypeId;
+
+    @Column(name="transfer_status_id")
+    @JsonProperty("transferStatusId")
+    private long transferStatusId;
+
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name="transfer_status_id", insertable = false, updatable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -49,29 +64,53 @@ public class Transfer {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name="transfer_type_id", insertable = false, updatable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private TransferType transferType;
+    private TransferType transferType;*/
+    //</editor-fold>
 
+    /* Joined two accounts to each transfer
+    * sending account joins */
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "account_from", referencedColumnName = "account_id", insertable = false, updatable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JoinColumn(name = "account_from", referencedColumnName = "account_id",
+            insertable = false, updatable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "balance"})
     private Account fromAccount;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "account_to", referencedColumnName = "account_id", insertable = false, updatable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JoinColumn(name = "account_to", referencedColumnName = "account_id",
+            insertable = false, updatable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "balance"})
     private Account toAccount;
 
-        public Transfer(long transferId, long transferTypeId, long transferStatusId, long accountIdFrom, long accountIdTo, BigDecimal amount, TransferStatus transferStatus, TransferType transferType, Account fromAccount, Account toAccount) {
+    /* setting insertable and updatable to false -
+    the Account entity updates Accounts, not the Transfer entity */
+
+
+    //<editor-fold desc="Type and Status Getters & Setters">
+    public TransferType getTransferType() {
+        return transferType;
+    }
+
+    public void setTransferType(TransferType transferType) {
+        this.transferType = transferType;
+    }
+
+    public TransferStatus getTransferStatus() {
+        return transferStatus;
+    }
+
+    public void setTransferStatus(TransferStatus transferStatus) {
+        this.transferStatus = transferStatus;
+    }
+    //</editor-fold>
+
+    public Transfer(long transferId, TransferType transferType, TransferStatus transferStatus, long accountIdFrom, long accountIdTo, BigDecimal amount, Account fromAccount, Account toAccount) {
         this.transferId = transferId;
-        this.transferTypeId = transferTypeId;
-        this.transferStatusId = transferStatusId;
+        this.transferType = transferType;
+        this.transferStatus = transferStatus;
         this.accountIdFrom = accountIdFrom;
         this.accountIdTo = accountIdTo;
         this.amount = amount;
-        this.transferStatus = transferStatus;
-        this.transferType = transferType;
         this.fromAccount = fromAccount;
         this.toAccount = toAccount;
     }
-
 }

@@ -1,12 +1,13 @@
 package com.techelevator.tenmo.model;
 
-public class TransferType {
+public enum TransferType {
+    request, send;
 
-    private long transferTypeId;
-    private String transferTypeDescription;
+/*    private long transferTypeId;
+    private String transferTypeDescription;*/
 
     //<editor-fold desc="Getters & Setters">
-    public long getTransferTypeId() {
+/*    public long getTransferTypeId() {
         return transferTypeId;
     }
 
@@ -20,13 +21,13 @@ public class TransferType {
 
     public void setTransferTypeDescription(String transferTypeDescription) {
         this.transferTypeDescription = transferTypeDescription;
-    }
+    }*/
     //</editor-fold>
 
-    public TransferType() {}
-
-    public TransferType(long transferTypeId, String transferType) {
+    TransferType() {}
+/*
+    TransferType(long transferTypeId, String transferType) {
         this.transferTypeId = transferTypeId;
         this.transferTypeDescription = transferType;
-    }
+    }*/
 }

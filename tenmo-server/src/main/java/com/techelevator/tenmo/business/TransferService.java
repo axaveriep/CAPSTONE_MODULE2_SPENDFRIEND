@@ -6,15 +6,13 @@ import com.techelevator.tenmo.exceptions.InvalidTransferAmountException;
 import com.techelevator.tenmo.exceptions.NonSufficentFundsException;
 import com.techelevator.tenmo.exceptions.TransferApprovalException;
 import com.techelevator.tenmo.exceptions.TransferSenderReceiverException;
-import com.techelevator.tenmo.model.Account;
-import com.techelevator.tenmo.model.Transfer;
-import com.techelevator.tenmo.model.TransferDTO;
+import com.techelevator.tenmo.model.*;
+import com.techelevator.tenmo.util.BasicLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.security.Principal;
 import java.util.List;
 
 @Service
@@ -29,82 +27,81 @@ public class TransferService {
     @Autowired
     TransferRepository transferRepository;
 
-    private final long STATUS_PENDING = 1;
-    private final long STATUS_APPROVED = 2;
-    private final long STATUS_REJECTED = 3;
-    private final long STATUS_INVALID_TRANSFER = 4;
-    private final long STATUS_INVALID_AMOUNT = 5;
-    private final long STATUS_USER_NOT_FOUND = 6;
-    private final long STATUS_NSF = 7;
-    private final long STATUS_UNAUTHORIZED_APPROVAL = 8;
 
-    private final long TYPE_REQUEST = 1;
-    private final long TYPE_SENDING = 2;
-
-
-
-    public Transfer createTransfer(TransferDTO transferDetails) {
+    public Transfer createTransfer(TransferDTO transferDetails, String principalName) {
         Transfer newTransfer = new Transfer();
         try {
              if(!accountRepository.findAll().contains(accountRepository.findByUserId(transferDetails.getFromID()))) {
-                newTransfer.setTransferStatusId(STATUS_USER_NOT_FOUND);
+                newTransfer.setTransferStatus(TransferStatus.user_not_found);
                 throw new UsernameNotFoundException("This user was not found.");
             } else if (transferDetails.getAmount().compareTo(BigDecimal.valueOf(0)) <= 0) {
-                newTransfer.setTransferStatusId(STATUS_INVALID_AMOUNT);
+                newTransfer.setTransferStatus(TransferStatus.invalid_amount);
                 throw new InvalidTransferAmountException("You must select a transfer amount larger then $0.00.");
             }else if(!accountRepository.findAll().contains(accountRepository.findByUserId(transferDetails.getToID()))) {
-                newTransfer.setTransferStatusId(STATUS_USER_NOT_FOUND);
+                newTransfer.setTransferStatus(TransferStatus.user_not_found);
                 throw new UsernameNotFoundException("This user was not found.");
             } else if (transferDetails.getFromID() == transferDetails.getToID()) {
-                newTransfer.setTransferStatusId(STATUS_INVALID_TRANSFER);
+                newTransfer.setTransferStatus(TransferStatus.invalid_transfer);
                 throw new TransferSenderReceiverException();
             } else {
                  newTransfer.setAccountIdFrom(accountRepository.findByUserId(transferDetails.getFromID()).getId());
                  newTransfer.setAccountIdTo(accountRepository.findByUserId(transferDetails.getToID()).getId());
                  newTransfer.setAmount(transferDetails.getAmount());
              }
-        } catch (InvalidTransferAmountException | TransferSenderReceiverException e) {
+        } catch (Exception e) {
             System.out.println(e.getMessage());
-            e.printStackTrace();
-        } catch (Exception x) {
-            System.out.println(x.getMessage());
-            x.printStackTrace();
+            BasicLogger.log(e.getMessage() + " | Current user: " + principalName);
         }
         return newTransfer;
     }
 
     public Transfer completeTransfer (Transfer transfer) throws NonSufficentFundsException {
-
+        try {
             Account fromAccount = accountService.findByAccountId(transfer.getAccountIdFrom());
             Account toAccount = accountService.findByAccountId(transfer.getAccountIdTo());
 
-            BigDecimal newFromBalance = accountService.subtractFromBalance(fromAccount.getId(),
-                    transfer.getAmount());
-            BigDecimal newToBalance = accountService.addToBalance(toAccount.getId(),
-                    transfer.getAmount());
+            BigDecimal newFromBalance =
+                    accountService.subtractFromBalance(fromAccount.getId(), transfer.getAmount());
+            BigDecimal newToBalance =
+                    accountService.addToBalance(toAccount.getId(), transfer.getAmount());
 
-          fromAccount = accountService.updateBalance(fromAccount, newFromBalance);
-           toAccount = accountService.updateBalance(toAccount, newToBalance);
+            fromAccount = accountService.updateBalance(fromAccount, newFromBalance);
+            toAccount = accountService.updateBalance(toAccount, newToBalance);
 
-            transfer.setTransferStatusId(STATUS_APPROVED);
+            transfer.setTransferStatus(TransferStatus.approved);
 
             accountRepository.saveAndFlush(fromAccount);
             accountRepository.saveAndFlush(toAccount);
-
+        } catch (NullPointerException e) {
+            BasicLogger.log(e.getMessage());
+            transfer.setTransferStatus(TransferStatus.invalid_transfer);
+        }
         return transfer;
     }
 
-    public Transfer sendTransfer (Transfer transfer) {
-        if (transfer.getTransferStatusId() < 4 ) {
+    public Transfer sendTransfer(Transfer transfer, String principalName) {
+        if (TransferStatus.isValid(transfer.getTransferStatus())) {
             Transfer sentTransfer = transfer;
             try {
-                sentTransfer = completeTransfer(transfer);
-                sentTransfer.setTransferTypeId(TYPE_SENDING);
-                transferRepository.saveAndFlush(sentTransfer);
+                String sendingUsername = userService.findByAccountId(transfer.getAccountIdFrom()).getUsername();
+                if (!sendingUsername.equals(principalName) ) {
+                    throw new TransferApprovalException();
+                } else {
+                    sentTransfer = completeTransfer(transfer);
+                    sentTransfer.setTransferType(TransferType.send);
+                    transferRepository.saveAndFlush(sentTransfer);
+                }
             } catch (NonSufficentFundsException e) {
-                sentTransfer.setTransferStatusId(STATUS_NSF);
+                sentTransfer.setTransferStatus(TransferStatus.nsf);
                 System.out.println(e.getMessage());
-                e.printStackTrace();
+                BasicLogger.log(e.getMessage() + " | Current user: " + principalName);
+            } catch (TransferApprovalException ex) {
+                sentTransfer.setTransferStatus(TransferStatus.unauthorized);
+                System.out.println(ex.getMessage());
+                BasicLogger.log(ex.getMessage() + " | Current user: " + principalName);
+            } catch (Exception x) {
+                sentTransfer.setTransferStatus(TransferStatus.invalid_transfer);
+                BasicLogger.log(x.getMessage() + " | Current user: " + principalName);
             }
             return sentTransfer;
         } else {
@@ -113,26 +110,27 @@ public class TransferService {
     }
 
     public Transfer approveTransfer (Transfer requestedTransfer, String principalName) {
-        String sendingUsername = requestedTransfer.getFromAccount().getUser().getUsername();
-
-        if (requestedTransfer.getTransferStatusId() < 4) {
+        if (requestedTransfer.getTransferStatus() == TransferStatus.pending) {
             Transfer approvedTransfer = requestedTransfer;
             try {
-                if (!sendingUsername.equals(principalName) || requestedTransfer.getTransferStatusId() != STATUS_PENDING) {
+                String sendingUsername = userService.findByAccountId(requestedTransfer.getAccountIdFrom()).getUsername();
+                if (!sendingUsername.equals(principalName) ) {
                     throw new TransferApprovalException();
                 } else {
                 approvedTransfer = completeTransfer(requestedTransfer);
                 transferRepository.saveAndFlush(approvedTransfer);
                 }
             } catch (NonSufficentFundsException e) {
-                approvedTransfer.setTransferStatusId(STATUS_NSF);
+                approvedTransfer.setTransferStatus(TransferStatus.nsf);
                 System.out.println(e.getMessage());
-                e.printStackTrace();
+                BasicLogger.log(e.getMessage() + " | Current user: " + principalName);
             } catch (TransferApprovalException ex) {
-                approvedTransfer.setTransferStatusId(STATUS_UNAUTHORIZED_APPROVAL);
+                approvedTransfer.setTransferStatus(TransferStatus.unauthorized);
                 System.out.println(ex.getMessage());
-                System.out.println(ex.getCause() + " ***E  GET CAUSE ******");
-                ex.printStackTrace();
+                BasicLogger.log(ex.getMessage() + " | Current user: " + principalName);
+            } catch (Exception x) {
+                approvedTransfer.setTransferStatus(TransferStatus.invalid_transfer);
+                BasicLogger.log(x.getMessage() + " | Current user: " + principalName);
             }
             return approvedTransfer;
         } else {
@@ -141,26 +139,29 @@ public class TransferService {
     }
 
     public Transfer rejectTransfer (Transfer rejectedTransfer, String principalName) {
-        String sendingUsername = userService.findByUserId(rejectedTransfer.getAccountIdFrom()).getUsername();
         try {
-            if (!sendingUsername.equals(principalName) || rejectedTransfer.getTransferStatusId() != STATUS_PENDING) {
+            String sendingUsername = userService.findByAccountId(rejectedTransfer.getAccountIdFrom()).getUsername();
+            if (!sendingUsername.equals(principalName) || rejectedTransfer.getTransferStatus() != TransferStatus.pending) {
                 throw new TransferApprovalException();
             } else {
-            rejectedTransfer.setTransferStatusId(STATUS_REJECTED);
+            rejectedTransfer.setTransferStatus(TransferStatus.rejected);
             transferRepository.saveAndFlush(rejectedTransfer);
             }
         } catch (TransferApprovalException e) {
-            rejectedTransfer.setTransferStatusId(STATUS_UNAUTHORIZED_APPROVAL);
+            rejectedTransfer.setTransferStatus(TransferStatus.unauthorized);
             System.out.println(e.getMessage());
-            e.printStackTrace();
+            BasicLogger.log(e.getMessage() + " | Current user: " + principalName);
+        } catch (Exception x) {
+            rejectedTransfer.setTransferStatus(TransferStatus.invalid_transfer);
+            BasicLogger.log(x.getMessage() + " | Current user: " + principalName);
         }
         return rejectedTransfer;
     }
 
     public Transfer requestTransfer (Transfer transfer) {
-        if (transfer.getTransferStatusId() < 4 ) {
-            transfer.setTransferTypeId(TYPE_REQUEST);
-            transfer.setTransferStatusId(STATUS_PENDING);
+        if (TransferStatus.isValid(transfer.getTransferStatus())) {
+            transfer.setTransferType(TransferType.request);
+            transfer.setTransferStatus(TransferStatus.pending);
             transferRepository.saveAndFlush(transfer);
         }
         return transfer;
